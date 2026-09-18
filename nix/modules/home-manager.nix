@@ -46,19 +46,39 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable {
-    programs.firefox = {
-      enable = true;
-      profiles = lib.mkMerge (
-        map (profile: {
-          "${profile}" = {
-            extraConfig = builtins.readFile "${package}/user.js";
-            containersForce = true;
-            userChrome = lib.mkBefore (builtins.readFile "${package}/chrome/userChrome.css");
-          };
-        }) cfg.profiles
-      );
-    };
+  config = lib.mkIf cfg.enable (lib.mkMerge [
+    (lib.mkIf (!cfg.librewolf) {
+      programs.firefox = {
+        enable = true;
+        profiles = lib.mkMerge (
+          map (profile: {
+            "${profile}" = {
+              extraConfig = builtins.readFile "${package}/user.js";
+              containersForce = true;
+              userChrome = lib.mkBefore (builtins.readFile "${package}/chrome/userChrome.css");
+            };
+          }) cfg.profiles
+        );
+      };
+    })
+    (lib.mkIf (cfg.librewolf) {
+      programs.librewolf = {
+        enable = true;
+        profiles = lib.mkMerge (
+          map (profile: {
+            "${profile}" = {
+              extraConfig = builtins.readFile "${package}/user.js";
+              containersForce = true;
+              userChrome = lib.mkBefore (builtins.readFile "${package}/chrome/userChrome.css");
+            };
+          }) cfg.profiles
+        );
+      };
+    })
+    {
+
+    }
+  ]);
 
     home.file = lib.mkMerge (
       map (profile: {
