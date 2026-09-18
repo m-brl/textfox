@@ -8,11 +8,15 @@ inputs:
 let
   inherit (pkgs.stdenv.hostPlatform) system;
   package = inputs.self.packages.${system}.default;
-  configDir =
+  firefoxConfigDir =
     "${config.programs.firefox.configPath}/"
+    + (lib.optionalString pkgs.stdenv.hostPlatform.isDarwin "Profiles/");
+  librewolfConfigDir =
+    "${config.programs.librewolf.configPath}/"
     + (lib.optionalString pkgs.stdenv.hostPlatform.isDarwin "Profiles/");
 
   cfg = config.textfox;
+  configDir = if cfg.librewolf then librewolfConfigDir else firefoxConfigDir;
 in
 {
 
@@ -29,6 +33,12 @@ in
   ];
 
   options.textfox = {
+    librewolf = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      description = "Whether to apply the textfox configuration to Librewolf instead of Firefox";
+    };
+
     profiles = lib.mkOption {
       type = with lib.types; listOf str;
       default = [ ];
