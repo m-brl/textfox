@@ -46,53 +46,52 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable (lib.mkMerge [
-    (lib.mkIf (!cfg.librewolf) {
-      programs.firefox = {
-        enable = true;
-        profiles = lib.mkMerge (
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      (lib.mkIf (!cfg.librewolf) {
+        programs.firefox = {
+          enable = true;
+          profiles = lib.mkMerge (
+            map (profile: {
+              "${profile}" = {
+                extraConfig = builtins.readFile "${package}/user.js";
+                containersForce = true;
+                userChrome = lib.mkBefore (builtins.readFile "${package}/chrome/userChrome.css");
+              };
+            }) cfg.profiles
+          );
+        };
+      })
+      (lib.mkIf cfg.librewolf {
+        programs.librewolf = {
+          enable = true;
+          profiles = lib.mkMerge (
+            map (profile: {
+              "${profile}" = {
+                extraConfig = builtins.readFile "${package}/user.js";
+                containersForce = true;
+                userChrome = lib.mkBefore (builtins.readFile "${package}/chrome/userChrome.css");
+              };
+            }) cfg.profiles
+          );
+        };
+      })
+      {
+        home.file = lib.mkMerge (
           map (profile: {
-            "${profile}" = {
-              extraConfig = builtins.readFile "${package}/user.js";
-              containersForce = true;
-              userChrome = lib.mkBefore (builtins.readFile "${package}/chrome/userChrome.css");
+            "${configDir}${profile}/chrome" = {
+              source = pkgs.lib.cleanSourceWith {
+                src = "${package}/chrome";
+                filter = path: type: !(type == "regular" && baseNameOf path == "userChrome.css");
+              };
+              recursive = true;
+            };
+            "${configDir}${profile}/chrome/config.css" = {
+              text = cfg.configCss;
             };
           }) cfg.profiles
         );
-      };
-    })
-    (lib.mkIf (cfg.librewolf) {
-      programs.librewolf = {
-        enable = true;
-        profiles = lib.mkMerge (
-          map (profile: {
-            "${profile}" = {
-              extraConfig = builtins.readFile "${package}/user.js";
-              containersForce = true;
-              userChrome = lib.mkBefore (builtins.readFile "${package}/chrome/userChrome.css");
-            };
-          }) cfg.profiles
-        );
-      };
-    })
-    {
-
-    }
-  ]);
-
-    home.file = lib.mkMerge (
-      map (profile: {
-        "${configDir}${profile}/chrome" = {
-          source = pkgs.lib.cleanSourceWith {
-            src = "${package}/chrome";
-            filter = path: type: !(type == "regular" && baseNameOf path == "userChrome.css");
-          };
-          recursive = true;
-        };
-        "${configDir}${profile}/chrome/config.css" = {
-          text = cfg.configCss;
-        };
-      }) cfg.profiles
-    );
-  };
+      }
+    ]
+  );
 }
